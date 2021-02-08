@@ -1,4 +1,4 @@
-# TetCTF 2021
+# Bamboofox CTF 2021
 I played as IrisSec with fellow members Apro and not\_really. These are just challenges I worked on.
 
 | Category | Challenge | Points |

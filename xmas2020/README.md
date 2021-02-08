@@ -33,5 +33,5 @@ Challenges: https://gitlab.com/Milkdrop/xmas-2020
 | Web | [Comfort Bot](comfortbot/solution.md) | 432 |
 | Web | [X-MAS Chan](xmaschan/solution.md) | 470 |
 | Web | [cat_clicker](catclicker/solution.md) | 474 |
-| Web | [How Brutus stole Christmas](x/solution.md) | 492 |
+| Web | [How Brutus stole Christmas](brutus/solution.md) | 492 |
 | Web | [Gnome's Buttons v4](gnomesbuttons/solution.md) | 498 |
