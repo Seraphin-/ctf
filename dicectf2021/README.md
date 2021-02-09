@@ -9,8 +9,3 @@ With IrisSec. Just some scripts/solves here, no full writeups.
 | Web | [Build a Better Panel](buildabetterpanel.md) | 299 |
 | Rev | [Lost in Your Eyes](lost/) | 334 |
 | Pwn | [babyrop](babyrop.py) | 116 |
-
-
-
-
-not\_really is god of rev
