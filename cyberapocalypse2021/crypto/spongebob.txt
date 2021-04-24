@@ -1,0 +1,4 @@
+inputs: 0000000000000000000000000000000000000000000000000000000000000000 and 0000000000000000
+flag: CHTB{b1tw1s3_backd00rs_d0n't_forg3t_to_w4sh_the1r_h4nds}
+
+zero inputs are always the magic solution to hash chals

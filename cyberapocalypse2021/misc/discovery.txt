@@ -1,0 +1,5 @@
+part 1: auth bypass with CVE-2018-8715
+part 2: connect to broker as anthony_davis, declare a queue on the Base exchange with routing key # (which acts as a wildcard with a exchange type of topic)
+
+CHTB{1_h4v3_n0_n4m3_@_@}
+

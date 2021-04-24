@@ -1,0 +1,6 @@
+CVE-2018–8004, third patch described here: https://medium.com/@knownsec404team/protocol-layer-attack-http-request-smuggling-cc654535b6f
+
+forge request to /shutdown, flag in response
+
+CHTB{c3ss4t10n_n33d_sync1ng_#@$?}
+

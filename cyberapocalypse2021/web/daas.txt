@@ -1,0 +1,5 @@
+exploit: CVE-2021-3129 (https://github.com/ambionics/laravel-exploits)
+
+wasted a lot of time since this laravel version should be patched afaik but I guess they downgraded!!!!
+
+CHTB{wh3n_7h3_d3bu663r_7urn5_4641n57_7h3_d3bu6633}
