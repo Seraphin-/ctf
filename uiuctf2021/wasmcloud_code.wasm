@@ -1,0 +1,32 @@
+; Fuzz _debugProcess(pid) and then spin in loop
+(module
+  (import "process" "exit" (func $return (param i32)))
+  (import "process" "_debugProcess" (func $enable (param i32)))
+  (func (export "main") (local $meme1 i32)
+    i32.const 0
+    set_local $meme1
+    
+    loop $B0
+      get_local $meme1
+      call $enable
+      get_local $meme1
+      i32.const 1
+      i32.add
+      set_local $meme1
+      get_local $meme1
+      i32.const 9999
+      i32.ne
+      br_if $B0
+    end
+    
+    loop $B1
+      i32.const 1
+      i32.const 2
+      i32.add
+      br $B1
+    end
+
+    i32.const 69420
+    call $return
+  )
+)

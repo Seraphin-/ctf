@@ -1,0 +1,7 @@
+(module
+  (import "process" "(your code goes here - will be reflected in error when visiting /run/ page)" (func $return (param i32)))
+  (func (export "main") (local $meme1 i32)
+    i32.const 69420
+    call $return
+  )
+)
