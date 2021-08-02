@@ -1,0 +1,20 @@
+[GENERAL]
+model_files: synth.v[logick]
+add_clock: True
+
+[DEFAULT]
+bmc_length = 26
+
+[z]
+description: "solve"
+assumptions: (GOOD = 1_1)
+prove: True
+verification: simulation
+expected: True
+
+[a]
+description: "s"
+assumptions: (BYTE > 32_8)
+prove: True
+verification: simulation
+expected: True

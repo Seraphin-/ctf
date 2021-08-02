@@ -1,3 +1,6 @@
+# phpfuck_fixed (Jail 449)
+# uiuctf{pl3as3_n0_m0rE_pHpee_9f4e3058}
+
 from pwn import xor
 import itertools
 

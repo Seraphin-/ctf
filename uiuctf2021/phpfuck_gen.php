@@ -1,4 +1,5 @@
 <?php
+// Helper to get strings that start with a target (1 or 2)
 $target = "8";
 
 $a = 0;
