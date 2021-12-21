@@ -164,7 +164,7 @@ WITH c AS (
             WITH w as (
                 WITH cK as 
                 (SELECT (ORD(x27)-48) as k FROM painting LIMIT 1 OFFSET 93), b as (SELECT ORD(x0) as x0, ... FROM painting LIMIT 1 OFFSET 61)
-                SELECT CONCAT(CHAR(IF(b.x%d+k>122,b.x%d+k-26,IF(b.x%d>90,b.x%d+k,IF(b.x%d+k>90,b.x%d+k-26, ...) as k FROM cK, b"
+                SELECT CONCAT(CHAR(IF(b.x%d+k>122,b.x%d+k-26,IF(b.x%d>90,b.x%d+k,IF(b.x%d+k>90,b.x%d+k-26, ...) as k FROM cK, b
             SELECT CAST(CONCAT(q,q,q,q,q,q,q,q) AS BINARY) as k FROM w
         )
         SELECT CAST(SUBSTRING(k FROM 1 FOR CHARACTER_LENGTH(pass)) ^ CAST(pass AS BINARY) AS CHAR) FROM management_passwords CROSS JOIN l ORDER BY id ASC
