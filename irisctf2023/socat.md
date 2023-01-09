@@ -82,4 +82,4 @@ ls: cannot access 'FLAG=irisctf{they_even_fixed_it_for_unbalanced_double_quotes}
 irisctf{they_even_fixed_it_for_unbalanced_double_quotes}
 ```
 
-There was an unintended solution using `!!`. In the future I need to design my challenges a bit more defensively - no shell when the challenge is literally interpolating commands. Just pass it to argv
+There was an unintended solution using `!!`. I thought I made a mistake in my bash allowing for a command escape, but it's actually a feature in socat - if you specify `!!`, socat will use the next text as another address specification that will be used for writing back out data to stdout! So `!!system:env` passes the output of ls to env first, which of course does not care about stdin and leaks the flag.
