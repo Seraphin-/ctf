@@ -43,7 +43,7 @@ int main() {
 
 The `main()` function prints a welcome message and calls the `descend()` function. Once it's done, it prints out the message at the `last_message` pointer, and exits.
 
-The `descend()` function recurively takes input and puts it on the stack. It reads up to 4096 bytes at a time into a buffer which is allocated with a given size, then .
+The `descend()` function recurively takes input and puts it on the stack. It reads up to 4096 bytes at a time into a buffer which is allocated with a given size, updates the `last_message`, then calls `descend()` again.
 If the given amount of input is too big or <= 0, then program returns all the way back to main.
 
 ## Solution
