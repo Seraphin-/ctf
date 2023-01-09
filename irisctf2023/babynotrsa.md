@@ -30,7 +30,7 @@ encrypted = (flag * e) % n # <-- the encryption is multiplication
 ```
 
 You can just divide the encrypted flag by the key as follows:
-- Calculate `d = -e mod n` - [Wikipedia](https://en.wikipedia.org/wiki/Modular_multiplicative_inverse) shows how to do it, or in Python Cryptodome's `Util.number.inverse` function can do it 
+- Calculate `d = e^-1 mod n` - [Wikipedia](https://en.wikipedia.org/wiki/Modular_multiplicative_inverse) shows how to do it, or in Python Cryptodome's `Util.number.inverse` function can do it 
 - Multiply encrypted flag by `d`, which is `1/e`. Then `encrypted * d = flag * e * (1 / e) = flag`
 
 More advanced solvers would probably just do it in Sage, which has abstractions for easily working in rings, like so:
