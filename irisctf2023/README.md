@@ -1,5 +1,7 @@
 # IrisCTF 2023 Author Writeups - sera
 
+Writeups in this folder are licensed under CC BY-NC.
+
 | Category | Challenge | Points |
 | --- | --- | --- |
 | Binary Exploitation | [babyseek](babyseek.md) | 167 |
