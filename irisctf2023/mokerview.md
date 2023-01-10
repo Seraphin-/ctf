@@ -87,7 +87,7 @@ def signer(session): # factory to return a function that signs URLs for the give
 ```
 These helper functions mostly deal with the CSRF system. The CSRF system requires routes to have a `token` GET parameter which is signed like so: `sha256(session_key + url)`.
 
-One may recognize this as being vulnerable to length extension. One can append to the url arbitrary data (`url + padding + anything`), given a valid CSRF token the route.
+One may recognize this as being vulnerable to length extension. One can append to the url arbitrary data (`url + padding + anything`), given a valid CSRF token for original URL.
 
 ```py
 def header(session):
@@ -129,7 +129,7 @@ def register():
     users[user] = {"password": password, "mokers": []}
     return redirect("/login")
 ```
-These routes handle the homepage, static routing, and registering an account. Besides being (intionally) stupid to use because the value attribute is set instead of a placeholder, they don't have any intended bugs.
+These routes handle the homepage, static routing, and registering an account. Besides being (intentionally) stupid to use because the value attribute is set instead of a placeholder, they don't have any intended bugs.
 
 ```py
 @app.route("/login", methods=["GET"])
@@ -213,7 +213,7 @@ def create(session):
 ```
 These routes allow one to create a new moker. There's content injection here combined with /view because the name of the moker is not filtered at all, but not anything I figured you couldn't do with `/view`.
 
-(This route was added after finishing the challenge for fun to let people add their own images for fun. This was a mistake because it opened up more unintended solutions that were limited by the length of MOKERS. I should have either removed the limit or not included the route.)
+(This route was added after finishing the challenge for fun to let people add their own images for fun. This was a mistake because it opened up more unintended solutions that were limited by the length of MOKERS, meaning later solvers might be stuck with their solutions. I should have either removed the limit or not included the route.)
 
 ```
 
