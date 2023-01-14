@@ -3,6 +3,37 @@
 
 This is a slightly-more-than-baby baby pwn challenge. The binary is compiled with RELRO turned off because it's small enough that it gets full RELRO by default. It has other default protections enabled.
 
+The whole challenge looks like so:
+```c
+void win() {
+    system("cat /flag"); // Prints flag
+}
+
+int main(int argc, char *argv[]) {
+    // This is just setup
+    setvbuf(stdin, NULL, _IONBF, 0);
+    setvbuf(stdout, NULL, _IONBF, 0);
+
+    // Print location to `win` function
+    printf("Your flag is located around %p.\n", win);
+
+    // Open `/dev/null`
+    FILE* null = fopen("/dev/null", "w");
+    int pos = 0;
+    void* super_special = &win; // now a pointer to win
+
+    fwrite("void", 1, 4, null); // Trigger the allocation of a buffer for writing to
+    printf("I'm currently at %p.\n", null->_IO_write_ptr); // Print location of buffer
+    printf("I'll let you write the flag into nowhere!\n");
+    printf("Where should I seek into? ");
+    scanf("%d", &pos);
+    null->_IO_write_ptr += pos; // Change buffer pointer
+
+    fwrite(&super_special, sizeof(void*), 1, null); // Write `win` location
+    exit(0);
+}
+```
+
 The challenge leaks the pointer to a `win` function which prints the flag...
 ```c
     printf("Your flag is located around %p.\n", win);

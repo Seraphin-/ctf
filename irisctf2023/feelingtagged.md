@@ -5,7 +5,7 @@
 
 This challenge exposes a note service which tries to sanitize HTML via BeautifulSoup in Python. It has an admin bot and looks like an XSS challenge.
 
-The sanitization is done like so:
+The user can submit any HTML for a note to display, but it has to go through a sanitization pass. The sanitization is done like so:
 ```py
 @app.route("/page")
 def page():
@@ -21,8 +21,7 @@ def page():
 ```
 BeautifulSoup parses the HTML and the challenge iterates over all the elements. If the element tag is not in `SAFE_TAGS` - which consists of only i, b, p, and br - it refuses to send it. It also refuses if any element has an attribute set.
 
-
-The intended solution is to find any parser difference between the default HTML parser (html.parser on the server) and an the HTML5 spec parser. Comments are usually where XSS happens with these, so by trying various invalid markup I came up with this solution:
+The intended solution is to find any parser difference between the default HTML parser (html.parser on the server) and an the HTML5 spec parser. Comments are once place where XSS happens with these, so by trying various invalid markup I came up with this solution:
 ```
 <!--><script>alert(1)</script>-->
 ```

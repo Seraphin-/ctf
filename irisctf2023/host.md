@@ -40,8 +40,12 @@ The client allows you to set any environment variable if the server says the nam
                 print("No!")
 ```
 
-The vulnerability is that there are some unsafe environment variables which are not filtered. One can find a more trustworthy list of environment variables [here](https://codebrowser.dev/glibc/glibc/sysdeps/generic/unsecvars.h.html) in libc.
+The intended vulnerability is that there are some unsafe environment variables which are not filtered. One can find a more trustworthy list of environment variables [here](https://codebrowser.dev/glibc/glibc/sysdeps/generic/unsecvars.h.html) in glibc.
 
-The `RESOLV_HOST_CONF` variable in particular will cause the resolver code to try to read the file specified as its argument and, if parsing fails, print the offending line of the file. We can use this to read `/flag` as cURL will attempt to resolve the flag domain and trigger the file read. The error will be printed to stderr as Python's `check_output` passes it through by default.
+The `RESOLV_HOST_CONF` variable in particular will cause the resolver code to try to read the file specified as its argument and, if parsing fails, print the offending line of the file. We can use this to read `/flag` as cURL will attempt to resolve the flag domain and trigger the file read by glibc. The error will be printed to stderr as Python's `check_output` passes it through by default.
 
-`irisctf{very_helpful_error_message}`
+The solution used by most, or all, solvers is that I did not properly realize that one could use cURL's proxy variables to have cURL send the `flag_domain` request to the server. That would cause the flag to be printed directly. I had looked through cURL's environemnt variables before, but passed over using a proxy for some reason.
+
+```
+irisctf{very_helpful_error_message}
+```

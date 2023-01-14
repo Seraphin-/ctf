@@ -10,7 +10,7 @@ The mode derives a permutation K of [0-15] from the AES key. The mode works on b
 The encryption in the mode is as follows:
 Let `C` be cipher blocks numbered 0-15 describing the data actually input into AES. Let P be cipher blocks corresponding to input data.
 Let `C_n` denote the block of `C` numbered `n` with byte indices `n` numbered 0-15, and `P_n` be the same with regards to `P`.
-`C_n[i] = P_i[K(n)]`
+Then `C_n[i] = P_i[K(n)]`.
 
 ```py
 def encrypt(inp):
@@ -26,7 +26,7 @@ def encrypt(inp):
     return AES.encrypt(data)
 ```
 
-In order to decrypt, the permutation is just reversed.
+In order to decrypt, the permutation is reversed knowing the key.
 
 In effect, this means that the Nth block of the encrypted data corresponds to all the K[N]th bytes of plaintext in each block. This basically transposes the data and then shuffles the blocks.
 
@@ -55,7 +55,7 @@ The type field is lowercased before being parsed, but the only types it understa
 ## Attack
 The scheme does not actually prevent the ECB penguin over enough data as it repeats after each 256 bytes. However, this is not useful for the solution, since it could only damage confidentiality, but the contents of the echo message are not secret.
 
-The structure of the scheme instead serves to make the message more malleable. Although you cannot predictably control the contents of the decrypted data like with CBC, the transposition means that corrupting one block of plaintext will corrupt only one byte in each block of plaintext.
+The structure of the scheme instead serves to make the message more malleable and allow a different cut-and-paste attack. Although you cannot predictably control the contents of the decrypted data like with CBC, the transposition means that corrupting one block of plaintext will corrupt only one byte in each block of plaintext.
 
 Becase the permutation is done before the encryption, changing a bit of plaintext will unpredictably set the corrupted bytes, but we can control the corruption since it's only 1 byte per block to forge a message.
 
@@ -76,7 +76,7 @@ If we corrupt a block of plaintext and it corresponds to the 13-16th bytes of ea
 We can start with corrupting one character randomly in each block to determine which blocks correspod to the plaintext indices we want to attack. (The reason the challenge is very lax with parsing the message is so you can do this without having to brute force valid decoding bytes).
 Then, we can randomly corrupt these blocks to change each byte in "echo" to "flag", as we assume is a 1/256 chance that a random AES decryption includes a certain byte at a certain index. Since the blocks are independent, we can brute force the first character until the server responds with "Fcho", then "FLho", and so on. I allowed uppercase just to prevent requiring even more brute force.
 
-Once you assemble the type "flag", the message will be corrupted, but that's fine.
+Once you assemble the type "flag", the server will respond with the flag.
 
 ```
 irisctf{bad_at_diffusion_mode}

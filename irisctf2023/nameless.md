@@ -1,7 +1,7 @@
 # Nameless (Misc)
 > obligatory unrealistic sandbox escape challenge!!!!!!!
 
-This challenge is a Python escape where the server strips almost all constants from your code and then runs it. It also removes all names (variables) that aren't locals/arguments.
+This challenge is a Python sandbox escape where the server strips almost all constants from your code and then runs it. It also removes all names (variables) that aren't locals/arguments.
 All strings are set to "", numbers to 0, tuples empty, and code is recursively checked.
 
 ```py
@@ -38,7 +38,7 @@ res = eval(res, {}, {}) # expected to return a callable
 print(res(vars(), vars))
 ```
 
-The trick is to use keyword arguments to extract specific names from arguments, and `**` to convert the dicts from `vars()` into keyword arguments.
+My trick was to use keyword arguments to extract specific names from arguments, and `**` to convert the dicts from `vars()` into keyword arguments.
 
 ```py
 lambda a, vars: (lambda __builtins__=None, **kw: (lambda exec, input, **k: exec(input()))(**vars(__builtins__)))(**a)

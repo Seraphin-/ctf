@@ -22,7 +22,12 @@ print("CT2 =", cipher.encrypt(flag).hex())
 
 CBC does not try to ensure the IV is secret, and it's easy to recover the IV from a known plaintext-ciphertext pair.
 
-Denote the known message as PT. The "key", which was used as an IV, can be recovered from the encrypted text like so:
+Denote the known message as PT. The CBC mode of encryption produces the first block of ciphertext like so:
+```
+CT = Encrypt(PT xor IV, KEY)
+```
+
+Notice the IV is mixed in with xor, which is the inverse of itself. Therefore, the "key", which was used as an IV, can be recovered from the encrypted text like so:
 ```
 key = Decrypt(CT1[:16], IV1) xor PT1[:16]
 ```

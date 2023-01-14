@@ -2,6 +2,8 @@
 > More byte mean more secure
 
 This PHP challenge generates a random 64 hex character password on connect and passes it to `password_hash` after "stretching" it by repeating each character 64 times. It was intended to help new players get used to scripting even with web challenges and also require a bit of looking into how functions work.
+
+The challenge starts by setting up the password hash like follows:
 ```php
 $password = exec("openssl rand -hex 64");
 
@@ -28,4 +30,17 @@ Simply try each combination and get the flag!
 
 ```
 irisctf{truncation_silent_and_deadly}
+```
+
+Author's solution script:
+```py
+r = remote("remote-ip", remote-port)
+r.recvuntil(b"!\n> ")
+
+charset = "abcdef0123456789"
+for a, b in itertools.product(charset, charset):
+    r.sendline((a*64+b*64).encode())
+    text = r.recvuntil([b"> ", "iris"])
+    if b"iris" in text:
+        print(text + r.recv(timeout=2))
 ```

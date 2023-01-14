@@ -1,9 +1,9 @@
 # mokerview (Web)
 > Classic bug combo pack
 
-This is a somewhat large Flask application where the intended solution is to chain a few kinda "classic" web bugs and claim a flagmoker for yourself. I'll go through the source and describe the bugs in each section, then at the end explain how you're intended to put them together.
+This is a somewhat large Flask application that lets you create and add mokers (images of Moker, a cat) to your account. There's a moker corresponding to the flag, but only the admin is allowed to access it. The website also has its own CSRF protection and a CSP preventing any scripts or objects from being loaded on all pages.
 
-The website lets you create and add mokers (images of Moker, a cat) to your account. There's a moker corresponding to the flag but only the admin is allowed to access it. The website also has its own CSRF protection and a CSP preventing any script and objects from being loaded on all pages.
+The intended solution is to chain a few "classic" web bugs and claim a flagmoker for yourself. I'll go through the source and describe the bugs in each section, then at the end explain how you're intended to put them together.
 
 ## Code
 ```
@@ -213,7 +213,7 @@ def create(session):
 ```
 These routes allow one to create a new moker. There's content injection here combined with /view because the name of the moker is not filtered at all, but not anything I figured you couldn't do with `/view`.
 
-(This route was added after finishing the challenge for fun to let people add their own images for fun. This was a mistake because it opened up more unintended solutions that were limited by the length of MOKERS. I should have either removed the limit or not included the route.)
+(This route was added after finishing the challenge for fun to let people add their own images for fun. This was a mistake because it opened up more unintended solutions that were limited by the length of MOKERS and could be seen by other solvers. I should have either removed the limit or not included the route.)
 
 ```
 
@@ -354,16 +354,3 @@ let base = "https://mokerview-web.chal.irisc.tf/add?args=ZGFpbHk9MYAAAAAAAAAAAAA
 ## Flag
 
 ![](https://i.imgur.com/lNvRX88.png)
-
-THANK YOU "MARIE" FOR LETTING ME USE "MOKER'S" PHOTO IN THIS CHALLENGE!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! THE CAT'S NAME IS ACTUALLY MOKA, MOKER IS A PET NAME
-
-
-...
-
-...
-
-...
-
-
-Also here's the original flag
-![](https://cdn.discordapp.com/attachments/816337570647506984/1059020578100617236/image.png)
