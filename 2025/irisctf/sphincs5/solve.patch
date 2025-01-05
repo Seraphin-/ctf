@@ -1,0 +1,1036 @@
+diff --git a/ref/Makefile b/ref/Makefile
+index a3aabad..1d551a8 100644
+--- a/ref/Makefile
++++ b/ref/Makefile
+@@ -1,8 +1,8 @@
+-PARAMS = sphincs-haraka-128f
+-THASH = robust
++PARAMS = sphincs-sha2-128f
++THASH = simple
+ 
+-CC=/usr/bin/gcc
+-CFLAGS=-Wall -Wextra -Wpedantic -O3 -std=c99 -Wconversion -Wmissing-prototypes -DPARAMS=$(PARAMS) $(EXTRA_CFLAGS)
++CC=/usr/bin/clang
++CFLAGS=-g -Wall -Wextra -Wpedantic -O3 -std=c99 -Wconversion -Wmissing-prototypes -DPARAMS=$(PARAMS) $(EXTRA_CFLAGS)
+ 
+ SOURCES =          address.c randombytes.c merkle.c wots.c wotsx1.c utils.c utilsx1.c fors.c sign.c
+ HEADERS = params.h address.h randombytes.h merkle.h wots.h wotsx1.h utils.h utilsx1.h fors.h api.h  hash.h thash.h
+@@ -45,6 +45,19 @@ benchmark: $(BENCHMARK:=.exec)
+ PQCgenKAT_sign: PQCgenKAT_sign.c $(DET_SOURCES) $(DET_HEADERS)
+ 	$(CC) $(CFLAGS) -o $@ $(DET_SOURCES) $< -lcrypto
+ 
++chal_genkey: chal_genkey.c $(DET_SOURCES) $(DET_HEADERS)
++	$(CC) $(CFLAGS) -o $@ $(DET_SOURCES) $< -lcrypto
++chal_sign: chal_sign.c $(DET_SOURCES) $(DET_HEADERS)
++	$(CC) $(CFLAGS) -o $@ $(DET_SOURCES) $< -lcrypto
++chal_verify: chal_verify.c $(DET_SOURCES) $(DET_HEADERS)
++	$(CC) $(CFLAGS) -o $@ $(DET_SOURCES) $< -lcrypto
++chal_verify_dump_roots: chal_verify_dump_roots.c $(DET_SOURCES) $(DET_HEADERS)
++	$(CC) $(CFLAGS) -o $@ $(DET_SOURCES) $< -lcrypto
++chal_bf_graft: chal_bf_graft.c $(DET_SOURCES) $(DET_HEADERS)
++	$(CC) $(CFLAGS) -o $@ $(DET_SOURCES) $< -lcrypto
++challenge: chal_genkey chal_sign chal_verify chal_verify_dump_roots
++	touch challenge
++
+ test/benchmark: test/benchmark.c test/cycles.c $(SOURCES) $(HEADERS)
+ 	$(CC) $(CFLAGS) -o $@ test/cycles.c $(SOURCES) $< $(LDLIBS)
+ 
+@@ -63,3 +76,5 @@ clean:
+ 	-$(RM) PQCgenKAT_sign
+ 	-$(RM) PQCsignKAT_*.rsp
+ 	-$(RM) PQCsignKAT_*.req
++	-$(RM) chal_genkey chal_sign chal_verify chal_verify_dump_roots chal_bf_graft challenge
++	-$(RM) ver req flagsign* newsig solve_graftkey keys.json sigs/*
+diff --git a/ref/api.h b/ref/api.h
+index d57a148..5e4d48a 100644
+--- a/ref/api.h
++++ b/ref/api.h
+@@ -52,7 +52,7 @@ int crypto_sign_keypair(unsigned char *pk, unsigned char *sk);
+  * Returns an array containing a detached signature.
+  */
+ int crypto_sign_signature(uint8_t *sig, size_t *siglen,
+-                          const uint8_t *m, size_t mlen, const uint8_t *sk);
++                          const uint8_t *m, size_t mlen, const uint8_t *sk, uint8_t targ_leaf);
+ 
+ /**
+  * Verifies a detached signature and message under a given public key.
+@@ -65,7 +65,7 @@ int crypto_sign_verify(const uint8_t *sig, size_t siglen,
+  */
+ int crypto_sign(unsigned char *sm, unsigned long long *smlen,
+                 const unsigned char *m, unsigned long long mlen,
+-                const unsigned char *sk);
++                const unsigned char *sk, uint8_t targ_leaf);
+ 
+ /**
+  * Verifies a given signature-message pair under a given public key.
+diff --git a/ref/chal_genkey.c b/ref/chal_genkey.c
+new file mode 100644
+index 0000000..46041ee
+--- /dev/null
++++ b/ref/chal_genkey.c
+@@ -0,0 +1,75 @@
++
++//
++//  Based on PQCgenKAT_sign.c
++//
++//  Created by Bassham, Lawrence E (Fed) on 8/29/17.
++//  Copyright © 2017 Bassham, Lawrence E (Fed). All rights reserved.
++//
++#include <stdio.h>
++#include <stdlib.h>
++#include <string.h>
++#include <ctype.h>
++#include <sys/param.h>
++#include "rng.h"
++#include "api.h"
++
++void	fprintBstr(FILE *fp, char *S, unsigned char *A, unsigned long long L);
++
++int main(void) {
++    FILE                *fp_req;
++    unsigned char       entropy_input[48];
++    unsigned char       pk[CRYPTO_PUBLICKEYBYTES], sk[CRYPTO_SECRETKEYBYTES];
++    int                 ret_val;
++
++    setvbuf(stdout, NULL, _IONBF, 0);
++    setvbuf(stdin, NULL, _IONBF, 0);
++
++    FILE* urandom = fopen("/dev/urandom", "r");
++    fread(entropy_input, 1, 48, urandom);
++    fclose(urandom);
++    randombytes_init(entropy_input, NULL);
++
++    printf(" === Params === \n");
++    printf("SPX_N = %lu\n", SPX_N);
++    printf("SPX_D = %lu\n", SPX_D);
++    printf("SPX_FORS_BYTES = %lu\n", SPX_FORS_BYTES);
++    printf("SPX_WOTS_BYTES = %lu\n", SPX_WOTS_BYTES);
++    printf("SPX_WOTS_W = %lu\n", SPX_WOTS_W);
++    printf("SPX_WOTS_LEN = %lu\n", SPX_WOTS_LEN);
++    printf("SPX_WOTS_LEN1 = %lu\n", SPX_WOTS_LEN1);
++    printf("SPX_WOTS_LEN2 = %lu\n", SPX_WOTS_LEN2);
++    printf("SPX_WOTS_LOGW = %lu\n", SPX_WOTS_LOGW);
++    printf("SPX_TREE_HEIGHT = %lu\n", SPX_TREE_HEIGHT);
++    printf(" === ------ === \n");
++
++    // Generate the public/private keypair
++    if ( (ret_val = crypto_sign_keypair(pk, sk)) != 0) {
++        printf("crypto_sign_keypair returned <%d>\n", ret_val);
++        return -1;
++    }
++    fprintBstr(stdout, "pk = ", pk, CRYPTO_PUBLICKEYBYTES);
++
++    fp_req = fopen("key", "w");
++    fwrite(pk, 1, CRYPTO_PUBLICKEYBYTES, fp_req);
++    fwrite(sk, 1, CRYPTO_SECRETKEYBYTES, fp_req);
++    fclose(fp_req);
++
++    return 0;
++}
++
++void
++fprintBstr(FILE *fp, char *S, unsigned char *A, unsigned long long L)
++{
++	unsigned long long  i;
++
++	fprintf(fp, "%s", S);
++
++	for ( i=0; i<L; i++ )
++		fprintf(fp, "%02X", A[i]);
++
++	if ( L == 0 )
++		fprintf(fp, "00");
++
++	fprintf(fp, "\n");
++}
++
+diff --git a/ref/chal_sign.c b/ref/chal_sign.c
+new file mode 100644
+index 0000000..f35189c
+--- /dev/null
++++ b/ref/chal_sign.c
+@@ -0,0 +1,88 @@
++
++//
++//  Based on PQCgenKAT_sign.c
++//
++//  Created by Bassham, Lawrence E (Fed) on 8/29/17.
++//  Copyright © 2017 Bassham, Lawrence E (Fed). All rights reserved.
++//
++#include <stdio.h>
++#include <stdlib.h>
++#include <string.h>
++#include <ctype.h>
++#include <sys/param.h>
++#include "rng.h"
++#include "api.h"
++
++void	fprintBstr(FILE *fp, char *S, unsigned char *A, unsigned long long L);
++
++int main(int argc, char** argv) {
++    FILE                *fp_req;
++    unsigned char       entropy_input[48];
++    unsigned char       *m, *sm;
++    unsigned long long  mlen, smlen;
++    unsigned char       pk[CRYPTO_PUBLICKEYBYTES], sk[CRYPTO_SECRETKEYBYTES];
++    int                 ret_val;
++
++    setvbuf(stdout, NULL, _IONBF, 0);
++    setvbuf(stdin, NULL, _IONBF, 0);
++
++    FILE* urandom = fopen("/dev/urandom", "r");
++    fread(entropy_input, 1, 48, urandom);
++    fclose(urandom);
++    randombytes_init(entropy_input, NULL);
++    
++    fp_req = fopen("solve_graftkey", "r");
++    fread(pk, 1, CRYPTO_PUBLICKEYBYTES, fp_req);
++    fread(sk, 1, CRYPTO_SECRETKEYBYTES, fp_req);
++    fclose(fp_req);
++
++    fp_req = fopen("req", "r");
++    fseek(fp_req, 0L, SEEK_END);
++    mlen = ftell(fp_req);
++    rewind(fp_req);
++
++    uint8_t targ_leaf = 0x0;
++    if(argc == 2) {
++        targ_leaf = argv[1][0] - (uint8_t)'0';
++    }
++    printf("target leaf = %u\n", targ_leaf);
++
++    m = (unsigned char *)calloc(mlen, sizeof(unsigned char));
++    sm = (unsigned char *)calloc(mlen+CRYPTO_BYTES, sizeof(unsigned char));
++    fread(m, 1, mlen, fp_req);
++
++    if ( (ret_val = crypto_sign(sm, &smlen, m, mlen, sk, targ_leaf)) != 0) {
++        printf("crypto_sign returned <%d>\n", ret_val);
++        return -1;
++    }
++
++    fprintf(stdout, "smlen = %llu\n", smlen);
++    //fprintBstr(stdout, "sm = ", sm, smlen);
++    fclose(fp_req);
++    fp_req = fopen("flagsign2", "w");
++    fwrite(sm, 1, smlen, fp_req);
++    fclose(fp_req);
++    fprintf(stdout, "\n");
++
++
++    free(m);
++    free(sm);
++    return 0;
++}
++
++void
++fprintBstr(FILE *fp, char *S, unsigned char *A, unsigned long long L)
++{
++	unsigned long long  i;
++
++	fprintf(fp, "%s", S);
++
++	for ( i=0; i<L; i++ )
++		fprintf(fp, "%02X", A[i]);
++
++	if ( L == 0 )
++		fprintf(fp, "00");
++
++	fprintf(fp, "\n");
++}
++
+diff --git a/ref/chal_solve.py b/ref/chal_solve.py
+new file mode 100644
+index 0000000..d6b1fe0
+--- /dev/null
++++ b/ref/chal_solve.py
+@@ -0,0 +1,174 @@
++from sphincs_util import *
++from sign_graft import sign_graft
++
++# Collect signatures
++from pwn import *
++import secrets
++import hashlib
++import json
++import glob
++import os
++from tqdm import tqdm
++from collections import defaultdict
++
++# r = remote("0", 1337)
++r = remote("sphincs5.chal.irisc.tf", 10103)
++
++r.recvuntil(b"pk = ")
++pk = bytes.fromhex(r.recvline().decode())
++
++os.system("rm -rf sigs/*")
++
++# keys that validate
++valid_paths = []
++with open("solve_graftkey", "wb") as f:
++    f.write(pk)
++    f.write(secrets.token_bytes(32)) # random private key
++    f.write(pk) # private key copy of public key
++
++for _ in tqdm(range(128)): # collect signatures
++    r.sendlineafter(b"> ", b"1")
++    r.recvuntil(b"sm = ")
++    s1 = r.recvline().rstrip(b"\n")
++
++    # local verify
++    with open("ver", "wb") as f:
++        f.write(bytes.fromhex(s1.decode()))
++    rc = os.system("./chal_verify > /dev/null")
++
++    path = f"sigs/sig{s1[:16].decode()}"
++    if rc == 0:
++        valid_paths.append(path)
++    with open(path, "wb") as f:
++        f.write(bytes.fromhex(s1.decode()))
++
++# (this is split up to be ran seperately if failed when testing)
++with open("solve_graftkey", "rb") as f:
++    pub_seed = f.read(0x10)
++    pub_key = pub_seed + f.read(0x10)
++    pstate = hashlib.sha256()
++    pstate.update(pub_seed + b"\x00"*(64-16))
++
++candidate_sets=[]
++wots_pks = {}
++bestkeys = {}
++
++# analyze keys for collisions and pick a good candidiate
++for file in glob.glob("sigs/*"):
++    print(file)
++    with open(file, "rb") as f:
++        sig = f.read()
++
++    comps = extract_components_of_sig(sig)
++    roots = dump_roots("solve_graftkey", file)
++
++    for layer in range(SPX_D):
++        wroot = chain_lengths(roots["layers"][layer]["root"])
++        wpk_ly = []
++        for i in range(SPX_WOTS_LEN):
++            wpk = roots["layers"][layer]["wots_pks"][i]
++            wsk = comps["sig"][layer]["wots"][i]
++            addr = roots["layers"][layer]["addr"]
++            if layer == 21: # target layer
++                wpk_ly.append(wpk)
++            if wpk not in wots_pks:
++                wots_pks[wpk] = {wroot[i]}
++            else:
++                if wroot[i] not in wots_pks[wpk]:
++                    wots_pks[wpk].add(wroot[i])
++                    print("=== Collision")
++                    print(layer, wpk, "signed", wots_pks[wpk])
++                    print(addr)
++            if layer == 21 and min(wots_pks[wpk]) == wroot[i]:
++                bestkeys[wpk] = (wroot[i], wsk, addr)
++        if layer == 21 and file in valid_paths:
++            if wpk_ly not in candidate_sets:
++                candidate_sets.append((wpk_ly, file)) # top part is chosen for grafting so make sure it's valid too
++
++print("Checked", len(wots_pks))
++
++# find a good candidate
++best = [0, 9999999999]
++for i, cf in enumerate(candidate_sets):
++    cset, _ = cf
++    cnt = [bestkeys[wpk][0] for wpk in cset]
++    if sum(cnt) < best[1]:
++        best[1] = sum(cnt)
++        best[0] = i
++    print(i, "can sign", cnt)
++
++print("Best", best)
++
++tg, example_file = candidate_sets[best[0]]
++target_node = None
++keys = []
++bests = []
++for i, t in enumerate(tg):
++    print(t, bestkeys[t])
++
++    # Check key
++    s, sk, addr = bestkeys[t]
++    target_node = addr[1], addr[0] # tree, leaf
++    addr = bytearray(bytes.fromhex(addr[2]))
++    addr[SPX_OFFSET_CHAIN_ADDR] = i
++    w = bytes(sk)
++    for k in range(s, 15):
++        addr[SPX_OFFSET_HASH_ADDR] = k
++        w = thash(w, pstate, addr[:SPX_SHA256_ADDR_BYTES])[:SPX_N]
++
++    assert w == t # ensure that we actually signed it...
++    keys.append({"s": s, "sk": sk.hex(), "addr": addr.hex()})
++    bests.append(s)
++
++with open("keys.json", "w") as f:
++    f.write(json.dumps(keys))
++
++# set up signature req
++with open("req", "w") as f:
++    f.write("give me the flag")
++
++print("target node is", target_node)
++# sign until we hit target node and is signable
++while True:
++    with open("solve_graftkey", "wb") as f:
++        f.write(pub_key)
++        f.write(secrets.token_bytes(32)) # random private key
++        f.write(pub_key)
++
++    out = subprocess.check_output(["./chal_sign", str(target_node[1])]).decode()
++    details = out.split("at 21: tree = ")[-1].split("\n")[0].split(" ")
++    tree = details[0].split(",")[0]
++    leaf = details[-1]
++
++    assert (int(tree),int(leaf)) == target_node # checked by signer
++
++    # now see if it's signable by us
++    print("good node, check sign")
++    out = json.loads(subprocess.check_output("./chal_verify_dump_roots solve_graftkey flagsign2", shell=True).decode())
++
++    root = bytes.fromhex(out[21*3])
++    root_c = chain_lengths(root)
++    print("root is", root)
++
++    if not all(root_c[i] >= bests[i] for i in range(SPX_WOTS_LEN)):
++        print("not signable")
++        continue
++
++    sign_graft("solve_graftkey", "flagsign2", example_file, root)
++
++    # verify it looks good
++    out = json.loads(subprocess.check_output("./chal_verify_dump_roots solve_graftkey newsig", shell=True).decode())
++    print("new signature root:", out[-1], pub_key[SPX_N:].hex().upper())
++    assert out[-1] == pub_key[SPX_N:].hex().upper()
++    break
++
++# send over new sig
++with open("newsig", "rb") as f:
++    ns = f.read().hex()
++
++r.sendlineafter(b"> ", b"2")
++r.sendlineafter(b": ", str(len(ns)).encode())
++r.sendlineafter(b": ", ns)
++
++# gg?
++r.interactive()
+diff --git a/ref/chal_verify.c b/ref/chal_verify.c
+new file mode 100644
+index 0000000..0fc7e25
+--- /dev/null
++++ b/ref/chal_verify.c
+@@ -0,0 +1,81 @@
++
++//
++//  Based on PQCgenKAT_sign.c
++//
++//  Created by Bassham, Lawrence E (Fed) on 8/29/17.
++//  Copyright © 2017 Bassham, Lawrence E (Fed). All rights reserved.
++//
++#include <stdio.h>
++#include <stdlib.h>
++#include <string.h>
++#include <ctype.h>
++#include <sys/param.h>
++#include "rng.h"
++#include "api.h"
++
++const char giveflag[] = "give me the flag";
++void	fprintBstr(FILE *fp, char *S, unsigned char *A, unsigned long long L);
++
++int main(void) {
++    FILE* fp_req;
++    unsigned char       entropy_input[48];
++    unsigned char       *sm, *m1;
++    unsigned long long  smlen, mlen1;
++    unsigned char       pk[CRYPTO_PUBLICKEYBYTES], sk[CRYPTO_SECRETKEYBYTES];
++    int                 ret_val;
++
++    setvbuf(stdout, NULL, _IONBF, 0);
++    setvbuf(stdin, NULL, _IONBF, 0);
++
++    FILE* urandom = fopen("/dev/urandom", "r");
++    fread(entropy_input, 1, 48, urandom);
++    fclose(urandom);
++    randombytes_init(entropy_input, NULL);
++
++    fp_req = fopen("solve_graftkey", "r");
++    fread(pk, 1, CRYPTO_PUBLICKEYBYTES, fp_req);
++    //fread(sk, 1, CRYPTO_SECRETKEYBYTES, fp_req);
++
++    fclose(fp_req);
++
++    fp_req = fopen("ver", "r");
++    fseek(fp_req, 0L, SEEK_END);
++    smlen = ftell(fp_req);
++    rewind(fp_req);
++  
++    m1 = (unsigned char *)calloc(smlen, sizeof(unsigned char));
++    sm = (unsigned char *)calloc(smlen, sizeof(unsigned char));
++    size_t rd = fread(sm, 1, smlen, fp_req);
++
++    ret_val = crypto_sign_open(m1, &mlen1, sm, smlen, pk);
++    printf("crypto_sign_open returned <%d> for len %llu\n", ret_val, mlen1);
++
++    /*if(ret_val == 0 && mlen1 == (sizeof(giveflag)-1) && memcmp(m1, giveflag, sizeof(giveflag)-1) == 0) {
++        system("cat /flag");
++        exit(0);
++    }
++    */
++
++    fclose(fp_req);
++
++    free(sm);
++    free(m1);
++    return ret_val;
++}
++
++void
++fprintBstr(FILE *fp, char *S, unsigned char *A, unsigned long long L)
++{
++	unsigned long long  i;
++
++	fprintf(fp, "%s", S);
++
++	for ( i=0; i<L; i++ )
++		fprintf(fp, "%02X", A[i]);
++
++	if ( L == 0 )
++		fprintf(fp, "00");
++
++	fprintf(fp, "\n");
++}
++
+diff --git a/ref/chal_verify_dump_roots.c b/ref/chal_verify_dump_roots.c
+new file mode 100644
+index 0000000..a37ea04
+--- /dev/null
++++ b/ref/chal_verify_dump_roots.c
+@@ -0,0 +1,202 @@
++
++//
++//  Based on PQCgenKAT_sign.c
++//
++//  Created by Bassham, Lawrence E (Fed) on 8/29/17.
++//  Copyright © 2017 Bassham, Lawrence E (Fed). All rights reserved.
++//
++#include <stdio.h>
++#include <stdlib.h>
++#include <string.h>
++#include <ctype.h>
++#include <sys/param.h>
++#include "rng.h"
++#include "api.h"
++#include "params.h"
++#include "wots.h"
++#include "fors.h"
++#include "hash.h"
++#include "thash.h"
++#include "address.h"
++//#include "randombytes.h"
++#include "utils.h"
++#include "merkle.h"
++
++void	fprintBstr(FILE *fp, char *S, unsigned char *A, unsigned long long L);
++
++/**
++ * Verifies a detached signature and message under a given public key.
++ */
++int x_crypto_sign_verify(const uint8_t *sig, size_t siglen,
++                       const uint8_t *m, size_t mlen, const uint8_t *pk)
++{
++    spx_ctx ctx;
++    const unsigned char *pub_root = pk + SPX_N;
++    unsigned char mhash[SPX_FORS_MSG_BYTES];
++    unsigned char wots_pk[SPX_WOTS_BYTES];
++    unsigned char root[SPX_N];
++    unsigned char leaf[SPX_N];
++    unsigned int i;
++    uint64_t tree;
++    uint32_t idx_leaf;
++    uint32_t wots_addr[8] = {0};
++    uint32_t tree_addr[8] = {0};
++    uint32_t wots_pk_addr[8] = {0};
++
++    if (siglen != SPX_BYTES) {
++        return -1;
++    }
++
++    memcpy(ctx.pub_seed, pk, SPX_N);
++
++    /* This hook allows the hash function instantiation to do whatever
++       preparation or computation it needs, based on the public seed. */
++    initialize_hash_function(&ctx);
++
++    set_type(wots_addr, SPX_ADDR_TYPE_WOTS);
++    set_type(tree_addr, SPX_ADDR_TYPE_HASHTREE);
++    set_type(wots_pk_addr, SPX_ADDR_TYPE_WOTSPK);
++
++    /* Derive the message digest and leaf index from R || PK || M. */
++    /* The additional SPX_N is a result of the hash domain separator. */
++    hash_message(mhash, &tree, &idx_leaf, sig, pk, m, mlen, &ctx);
++    sig += SPX_N;
++
++    /* Layer correctly defaults to 0, so no need to set_layer_addr */
++    set_tree_addr(wots_addr, tree);
++    set_keypair_addr(wots_addr, idx_leaf);
++
++    fors_pk_from_sig(root, sig, mhash, &ctx, wots_addr);
++    sig += SPX_FORS_BYTES;
++
++    /* For each subtree.. */
++    for (i = 0; i < SPX_D; i++) {
++        set_layer_addr(tree_addr, i);
++        set_tree_addr(tree_addr, tree);
++
++        copy_subtree_addr(wots_addr, tree_addr);
++        set_keypair_addr(wots_addr, idx_leaf);
++
++        copy_keypair_addr(wots_pk_addr, wots_addr);
++
++        /* The WOTS public key is only correct if the signature was correct. */
++        /* Initially, root is the FORS pk, but on subsequent iterations it is
++           the root of the subtree below the currently processed subtree. */
++        fprintBstr(stdout, "\"", root, SPX_N);
++        printf("\",");
++        wots_pk_from_sig(wots_pk, sig, root, &ctx, wots_addr);
++        fprintBstr(stdout, "\"", wots_pk, SPX_WOTS_BYTES);
++        printf("\",[%u,%lu,", idx_leaf, tree);
++        fprintBstr(stdout, "\"", wots_addr, sizeof(wots_addr));
++        printf("\"],");
++        sig += SPX_WOTS_BYTES;
++
++        /* Compute the leaf node using the WOTS public key. */
++        thash(leaf, wots_pk, SPX_WOTS_LEN, &ctx, wots_pk_addr);
++        //fprintBstr(stdout, "\n! tree_addr= ", tree_addr, sizeof(tree_addr));
++        //printf("\n");
++
++        /* Compute the root node of this subtree. */
++        compute_root(root, leaf, idx_leaf, 0, sig, SPX_TREE_HEIGHT,
++                     &ctx, tree_addr);
++        sig += SPX_TREE_HEIGHT * SPX_N;
++
++        /* Update the indices for the next layer. */
++        idx_leaf = (tree & ((1 << SPX_TREE_HEIGHT)-1));
++        tree = tree >> SPX_TREE_HEIGHT;
++    }
++
++    /* Check if the root node equals the root node in the public key. */
++    fprintBstr(stdout, "\"", root, SPX_N);
++    printf("\"");
++    if (memcmp(root, pub_root, SPX_N)) {
++        return -1;
++    }
++
++    return 0;
++}
++
++
++/**
++ * Verifies a given signature-message pair under a given public key.
++ */
++int x_crypto_sign_open(unsigned char *m, unsigned long long *mlen,
++                     const unsigned char *sm, unsigned long long smlen,
++                     const unsigned char *pk)
++{
++    /* The API caller does not necessarily know what size a signature should be
++       but SPHINCS+ signatures are always exactly SPX_BYTES. */
++    if (smlen < SPX_BYTES) {
++        memset(m, 0, smlen);
++        *mlen = 0;
++        return -1;
++    }
++
++    *mlen = smlen - SPX_BYTES;
++
++    if (x_crypto_sign_verify(sm, SPX_BYTES, sm + SPX_BYTES, (size_t)*mlen, pk)) {
++        memset(m, 0, smlen);
++        *mlen = 0;
++        return -1;
++    }
++    return 0;
++}
++
++int main(int argc, const char** argv) {
++    FILE* fp_req;
++    unsigned char       entropy_input[48];
++    unsigned char       *sm, *m1;
++    unsigned long long  smlen, mlen1;
++    unsigned char       pk[CRYPTO_PUBLICKEYBYTES], sk[CRYPTO_SECRETKEYBYTES];
++    int                 ret_val;
++
++    if(argc < 3) return -1;
++
++    setvbuf(stdout, NULL, _IONBF, 0);
++    setvbuf(stdin, NULL, _IONBF, 0);
++
++    FILE* urandom = fopen("/dev/urandom", "r");
++    fread(entropy_input, 1, 48, urandom);
++    fclose(urandom);
++    randombytes_init(entropy_input, NULL);
++
++    fp_req = fopen(argv[1], "r");
++    fread(pk, 1, CRYPTO_PUBLICKEYBYTES, fp_req);
++    fread(sk, 1, CRYPTO_SECRETKEYBYTES, fp_req);
++
++    fclose(fp_req);
++
++    fp_req = fopen(argv[2], "r");
++    fseek(fp_req, 0L, SEEK_END);
++    smlen = ftell(fp_req);
++    rewind(fp_req);
++  
++    m1 = (unsigned char *)calloc(smlen, sizeof(unsigned char));
++    sm = (unsigned char *)calloc(smlen, sizeof(unsigned char));
++    size_t rd = fread(sm, 1, smlen, fp_req);
++
++    printf("[");
++    ret_val = x_crypto_sign_open(m1, &mlen1, sm, smlen, pk);
++    printf("]");
++
++    fclose(fp_req);
++
++    free(sm);
++    free(m1);
++    return 0;
++}
++
++void
++fprintBstr(FILE *fp, char *S, unsigned char *A, unsigned long long L)
++{
++	unsigned long long  i;
++
++	fprintf(fp, "%s", S);
++
++	for ( i=0; i<L; i++ )
++		fprintf(fp, "%02X", A[i]);
++
++	if ( L == 0 )
++		fprintf(fp, "00");
++}
++
+diff --git a/ref/challenge.py b/ref/challenge.py
+new file mode 100644
+index 0000000..f29d8f0
+--- /dev/null
++++ b/ref/challenge.py
+@@ -0,0 +1,39 @@
++import os
++import sys
++
++FLAG = b"give me the flag"
++
++print("Welcome to my stable SPHINCS+ signing service.")
++os.system("./chal_genkey")
++
++for attempt in range(1280):
++    choice = input("> ")
++
++    if choice == "1":
++        m = input("Hex-encoded message: ")
++        m = bytes.fromhex(m)
++        if m == FLAG:
++            print("NO")
++            exit(-1)
++        with open("req", "wb") as f:
++            f.write(m)
++        os.system("./chal_sign")
++    elif choice == "2":
++        smlen = int(input("Hex length: "))
++        print("Hex-encoded signature: ", end="")
++        rlen = 0
++        m = ""
++        while rlen < smlen:
++            # ignore line breaks while reading
++            m += sys.stdin.read(min(4096, smlen - rlen)).replace("\n","")
++            rlen = len(m)
++
++        m = bytes.fromhex(m)
++        sys.stdin.readline()
++
++        with open("ver", "wb") as f:
++            f.write(m)
++        os.system("./chal_verify")
++    else:
++        print("bye")
++        exit()
+diff --git a/ref/sign.c b/ref/sign.c
+index a8e0c3c..624599a 100644
+--- a/ref/sign.c
++++ b/ref/sign.c
+@@ -1,6 +1,7 @@
+ #include <stddef.h>
+ #include <string.h>
+ #include <stdint.h>
++#include <stdio.h>
+ 
+ #include "api.h"
+ #include "params.h"
+@@ -93,7 +94,7 @@ int crypto_sign_keypair(unsigned char *pk, unsigned char *sk)
+  * Returns an array containing a detached signature.
+  */
+ int crypto_sign_signature(uint8_t *sig, size_t *siglen,
+-                          const uint8_t *m, size_t mlen, const uint8_t *sk)
++                          const uint8_t *m, size_t mlen, const uint8_t *sk, uint8_t targ_leaf)
+ {
+     spx_ctx ctx;
+ 
+@@ -122,28 +123,39 @@ int crypto_sign_signature(uint8_t *sig, size_t *siglen,
+     /* Optionally, signing can be made non-deterministic using optrand.
+        This can help counter side-channel attacks that would benefit from
+        getting a large number of traces when the signer uses the same nodes. */
+-    randombytes(optrand, SPX_N);
+-    /* Compute the digest randomization value. */
+-    gen_message_random(sig, sk_prf, optrand, m, mlen, &ctx);
+-
+-    /* Derive the message digest and leaf index from R, PK and M. */
+-    hash_message(mhash, &tree, &idx_leaf, sig, pk, m, mlen, &ctx);
++    size_t attempt = 0;
++    while(1) {
++        randombytes(optrand, SPX_N);
++        /* Compute the digest randomization value. */
++        gen_message_random(sig, sk_prf, optrand, m, mlen, &ctx);
++
++        /* Derive the message digest and leaf index from R, PK and M. */
++        hash_message(mhash, &tree, &idx_leaf, sig, pk, m, mlen, &ctx);
++
++        printf("tree = %lu, leaf = %u\n", tree, idx_leaf);
++        if((tree & 0xFFFFULL) == 0x1337ULL && (tree >> 60ULL) == (uint64_t)targ_leaf) break;
++        attempt++;
++    }
++    printf("%lu attempts needed\n", attempt);
+     sig += SPX_N;
+ 
+     set_tree_addr(wots_addr, tree);
+     set_keypair_addr(wots_addr, idx_leaf);
+ 
+     /* Sign the message hash using FORS. */
++    printf("do fors sign\n");
+     fors_sign(sig, root, mhash, &ctx, wots_addr);
+     sig += SPX_FORS_BYTES;
+ 
+     for (i = 0; i < SPX_D; i++) {
++        printf("at %u: tree = %lu, leaf = %u\n", i, tree, idx_leaf);
+         set_layer_addr(tree_addr, i);
+         set_tree_addr(tree_addr, tree);
+ 
+         copy_subtree_addr(wots_addr, tree_addr);
+         set_keypair_addr(wots_addr, idx_leaf);
+ 
++        printf("do wots sign\n");
+         merkle_sign(sig, root, &ctx, wots_addr, tree_addr, idx_leaf);
+         sig += SPX_WOTS_BYTES + SPX_TREE_HEIGHT * SPX_N;
+ 
+@@ -245,11 +257,11 @@ int crypto_sign_verify(const uint8_t *sig, size_t siglen,
+  */
+ int crypto_sign(unsigned char *sm, unsigned long long *smlen,
+                 const unsigned char *m, unsigned long long mlen,
+-                const unsigned char *sk)
++                const unsigned char *sk, uint8_t targ_leaf)
+ {
+     size_t siglen;
+ 
+-    crypto_sign_signature(sm, &siglen, m, (size_t)mlen, sk);
++    crypto_sign_signature(sm, &siglen, m, (size_t)mlen, sk, targ_leaf);
+ 
+     memmove(sm + SPX_BYTES, m, mlen);
+     *smlen = siglen + mlen;
+diff --git a/ref/sign_graft.py b/ref/sign_graft.py
+new file mode 100644
+index 0000000..1a0dff2
+--- /dev/null
++++ b/ref/sign_graft.py
+@@ -0,0 +1,56 @@
++from sphincs_util import *
++import json
++import hashlib
++
++def sign_graft(key_file, orig_sig_file, top_sig_file, root):
++    print("signing", root.hex())
++
++    # sign the new root
++    with open(key_file, "rb") as f:
++        pub_seed = f.read(0x10)
++        pstate = hashlib.sha256()
++        pstate.update(pub_seed + b"\x00"*(64-16))
++
++    with open("keys.json") as f:
++        w = json.load(f)
++
++    wroot = chain_lengths(root)
++    sig = b""
++    for instance in range(SPX_WOTS_LEN):
++        targ = wroot[instance]
++        wi = w[instance]
++        # sign up target
++        addr = bytearray(bytes.fromhex(wi["addr"]))
++        addr[SPX_OFFSET_CHAIN_ADDR] = instance
++        sk = bytes.fromhex(wi["sk"])
++        if targ > wi["s"]:
++            for k in range(wi["s"], targ):
++                addr[SPX_OFFSET_HASH_ADDR] = k
++                sk = thash(sk, pstate, addr[:SPX_SHA256_ADDR_BYTES])[:SPX_N]
++        elif targ < wi["s"]:
++            raise ValueError(f"{targ} < {wi['s']}??")
++
++        sig += sk
++
++    #print("new part:", sig.hex())
++
++    with open(orig_sig_file, "rb") as f:
++        orig_sig = bytearray(f.read())
++    with open(top_sig_file, "rb") as f:
++        orig_sig2 = f.read()
++
++    tmsg = b"give me the flag"
++
++    # graft the signature together
++    comp = extract_components_of_sig(sig)
++    orig_sig = orig_sig[:comp["end"]]
++    orig_sig += bytearray(tmsg)
++    TARG=21
++    i = SPX_N+SPX_FORS_BYTES+(SPX_WOTS_BYTES+SPX_TREE_HEIGHT*SPX_N)*TARG # skip to target layer
++    orig_sig[i:i+SPX_WOTS_BYTES] = bytearray(sig) # signature component
++    orig_sig[i+SPX_WOTS_BYTES:i+SPX_WOTS_BYTES+SPX_TREE_HEIGHT*SPX_N] = orig_sig2[i+SPX_WOTS_BYTES:i+SPX_WOTS_BYTES+SPX_TREE_HEIGHT*SPX_N] # auth tree
++    i += SPX_WOTS_BYTES+SPX_TREE_HEIGHT*SPX_N
++    orig_sig[i:comp["end"]] = orig_sig2[i:comp["end"]] # copy everything else too (just the flag though)
++
++    with open("newsig", "wb") as f:
++        f.write(orig_sig)
+diff --git a/ref/sphincs_util.py b/ref/sphincs_util.py
+new file mode 100644
+index 0000000..229ec4e
+--- /dev/null
++++ b/ref/sphincs_util.py
+@@ -0,0 +1,127 @@
++SPX_N = 16
++SPX_D = 22
++SPX_FORS_BYTES = 3696
++SPX_WOTS_BYTES = 560
++SPX_TREE_HEIGHT = 3
++SPX_WOTS_W = 16
++SPX_WOTS_LEN = 35
++SPX_WOTS_LEN1 = 32
++SPX_WOTS_LEN2 = 3
++SPX_WOTS_LOGW = 4
++SPX_OFFSET_HASH_ADDR = 21
++SPX_SHA256_ADDR_BYTES = 22
++SPX_OFFSET_CHAIN_ADDR = 17
++
++import sys
++import subprocess
++import json
++import hashlib
++
++def extract_components_of_sig(sig):
++    props = {}
++    i = 0
++    props["R"] = sig[i:i+SPX_N]
++    i += SPX_N
++    props["fors"] = sig[i:i+SPX_FORS_BYTES]
++    i += SPX_FORS_BYTES
++    props["sig"] = []
++    for d in range(SPX_D):
++        rsig = sig[i:i+SPX_WOTS_BYTES+SPX_TREE_HEIGHT*SPX_N]
++        ps = {"rsig": rsig}
++        
++        # wots sig parts
++        ps["wots"] = []
++        for w in range(SPX_WOTS_LEN):
++            ps["wots"].append(sig[i:i+SPX_N])
++            i += SPX_N
++        # i += SPX_WOTS_BYTES
++
++        # auth path
++        path = []
++        ps["path"] = path
++        for w in range(SPX_TREE_HEIGHT):
++            path.append(sig[i:i+SPX_N])
++            i += SPX_N
++        # i += SPX_TREE_HEIGHT*SPX_N
++        props["sig"].append(ps)
++
++    props["end"] = i # == SPX_BYTES
++    props["msg"] = sig[i:]
++
++    return props
++
++def base_w(out_len, input):
++    inp = 0
++    out = 0
++    total = 0
++    bits = 0
++    output = [0] * out_len
++    for consumed in range(out_len):
++        if bits == 0:
++            total = input[inp]
++            inp += 1
++            bits += 8
++        bits -= SPX_WOTS_LOGW
++        output[out] = (total >> bits) & (SPX_WOTS_W - 1)
++        out += 1
++    return output
++
++def wots_checksum(msg_base_w):
++    csum = 0
++    csum_bytes = [0] * ((SPX_WOTS_LEN2 * SPX_WOTS_LOGW + 7) // 8)
++
++    for i in range(SPX_WOTS_LEN1):
++        csum += SPX_WOTS_W - 1 - msg_base_w[i]
++
++    csum = csum << ((8 - ((SPX_WOTS_LEN2 * SPX_WOTS_LOGW) % 8)) % 8);
++    csum_bytes = csum.to_bytes(2, 'big')
++    return base_w(SPX_WOTS_LEN2, csum_bytes);
++
++def chain_lengths(msg):
++    lengths = base_w(SPX_WOTS_LEN1, msg)
++    lengths += wots_checksum(lengths)
++    return lengths
++
++def dump_roots(k, p):
++    data = subprocess.check_output(["./chal_verify_dump_roots", k, p]).decode()
++    data = json.loads(data)
++    ret = []
++    for i in range(SPX_D): # last is root public key
++        data[i*3+1] = bytes.fromhex(data[i*3+1])
++        wots = [data[i*3+1][z:z+SPX_N] for z in range(0, SPX_WOTS_LEN*SPX_N, SPX_N)]
++        ret.append({"root": bytes.fromhex(data[i*3]), "wots_pks": wots, "addr": data[i*3+2]})
++    return {"pk": data[SPX_D*3], "layers": ret}
++
++def thash(buffer, pstate, addr):
++    h = pstate.copy()
++    h.update(addr + buffer)
++    return h.digest()
++
++if __name__ == "__main__":
++    with open("solve_graftkey", "rb") as f:
++        pub_seed = f.read(0x10)
++        pstate = hashlib.sha256()
++        pstate.update(pub_seed + b"\x00"*(64-16))
++
++    with open(sys.argv[1], "rb") as f:
++        sig = f.read()
++    comps = extract_components_of_sig(sig)
++    print(comps["msg"], comps["end"])
++
++    roots = dump_roots("solve_graftkey", sys.argv[1])
++    LT = 21
++
++    w0a = bytearray(bytes.fromhex(roots["layers"][LT]["addr"][2]))
++    #wroot = [int(x, 16) for x in roots["layers"][20]["root"].hex()]
++    wroot = chain_lengths(roots["layers"][LT]["root"])
++    for instance in range(SPX_WOTS_LEN):
++        w0pk = roots["layers"][LT]["wots_pks"][instance]
++        w0 = comps["sig"][LT]["wots"][instance]
++        print(instance, w0, w0pk, w0a)
++        w0a[SPX_OFFSET_CHAIN_ADDR] = instance
++        s = wroot[instance]
++        for k in range(s,15):
++            w0a[SPX_OFFSET_HASH_ADDR] = k
++            w0 = thash(w0, pstate, w0a[:SPX_SHA256_ADDR_BYTES])[:SPX_N]
++        if w0 == w0pk:
++            print("OK", s)

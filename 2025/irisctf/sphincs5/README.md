@@ -1,0 +1,3 @@
+- Run `get_solve.sh`
+- Run `make challenge`
+- Run `python3 chal-solve.py`
