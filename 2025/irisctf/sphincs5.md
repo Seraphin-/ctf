@@ -5,9 +5,9 @@
 I made this writeup without particularly proofreading it so feel free to harass me if you want clarifications.
 
 ## TL;DR
-- When the diff path is hit, the treehash for the XMSS-MT signature is computed incorrectly. This means that the node next layer up in the hypertree signs the wrong message, causing the WOTS+ key to be reused, so the key can be compromised directly.
+- When the diff path is hit, the treehash for the XMSS-MT signature is computed incorrectly. This means that the node next layer up in the hypertree signs the wrong message, causing the WOTS+ key to be used to sign more than 1 message, so the key can be compromised directly.
 - Collect a few hundred signatures and check which ones reuse WOTS+ keys. Target the key at layer $d-1$ (the root hypertree which sings $d-2$) that has the lowest sum (i.e. can sign the most messages).
-- Generate a random private key and sign the flag message (using the correct algorithm) randomly until it matches the `addr & 0xFFFF = 0x1337` condition, and the address points to the recovered WOTS+ key. If the signature isn't signable by the target WOTS+ key, just choose another value for $R$.
+- Generate a random private key and sign the flag message (using the correct algorithm) randomly until it matches the `addr & 0xFFFF = 0x1337` condition, and the address points to the recovered WOTS+ key. If the root at $d-2$ isn't signable by the target WOTS+ key, just choose another private key.
 - Take the part of the new signature form the start up to the target layer. Sign the root node at layer $d-2$ with the compromised WOTS+ key. Take the authentication path from a valid signature and then append the flag message from the new signature.
 
 ## Challenge
