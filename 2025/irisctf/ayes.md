@@ -59,7 +59,7 @@ for i in range(16):
             break
         seen[d] = bit
     # one of these
-    key.append(((196 ^ bit) & 0xff, (196 ^ seen[d]) & 0xff))
+    key.append(((28 ^ bit) & 0xff, (28 ^ seen[d]) & 0xff))
     seen = {}
 
 print(key)
